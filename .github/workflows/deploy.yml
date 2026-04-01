@@ -22,11 +22,14 @@ jobs:
 
       - name: Build and push image to ACR
         run: |
-          az acr build \
-            --registry $ACR_NAME \
-            --image $APP_NAME:${{ github.sha }} \
-            --image $APP_NAME:latest \
+          ACR_PASS=$(az acr credential show -n $ACR_NAME --query passwords[0].value -o tsv)
+          docker login $ACR_NAME.azurecr.io -u $ACR_NAME -p "$ACR_PASS"
+          docker build --platform linux/amd64 \
+            -t $ACR_NAME.azurecr.io/$APP_NAME:${{ github.sha }} \
+            -t $ACR_NAME.azurecr.io/$APP_NAME:latest \
             .
+          docker push $ACR_NAME.azurecr.io/$APP_NAME:${{ github.sha }}
+          docker push $ACR_NAME.azurecr.io/$APP_NAME:latest
 
       - name: Deploy to Container App
         run: |
@@ -34,3 +37,26 @@ jobs:
             --name $APP_NAME \
             --resource-group $RESOURCE_GROUP \
             --image $ACR_NAME.azurecr.io/$APP_NAME:${{ github.sha }}
+
+      - name: Notify via ntfy
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            TITLE="✅ Amatix deployed"
+            MSG="Live: https://amatix-hello.yellowrock-417f350a.switzerlandnorth.azurecontainerapps.io"
+            PRIORITY="default"
+            TAGS="white_check_mark,rocket"
+          else
+            TITLE="❌ Amatix deploy failed"
+            MSG="Pipeline failed on commit ${{ github.sha }}"
+            PRIORITY="high"
+            TAGS="x,warning"
+          fi
+          curl -s \
+            -H "Title: $TITLE" \
+            -H "Priority: $PRIORITY" \
+            -H "Tags: $TAGS" \
+            -H "Click: https://github.com/${{ github.repository }}/actions" \
+            -d "$MSG" \
+            https://ntfy.sh/amatix
