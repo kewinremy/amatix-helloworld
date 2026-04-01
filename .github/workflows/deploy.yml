@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
   ACR_NAME: amatixacr
   APP_NAME: amatix-hello
@@ -12,11 +15,12 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Azure Login
-        uses: azure/login@v2
+        uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v2.1.0
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
@@ -59,4 +63,4 @@ jobs:
             -H "Tags: $TAGS" \
             -H "Click: https://github.com/${{ github.repository }}/actions" \
             -d "$MSG" \
-            https://ntfy.sh/amatix
+            https://ntfy.sh/${{ secrets.NTFY_TOPIC }}
