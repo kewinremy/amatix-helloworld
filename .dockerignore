@@ -1,0 +1,12 @@
+.git
+.github
+.gitignore
+.dockerignore
+node_modules
+*.md
+.env
+.env.*
+infra/
+*.tfstate
+*.tfstate.backup
+.terraform/
