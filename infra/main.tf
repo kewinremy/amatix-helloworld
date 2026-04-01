@@ -5,6 +5,12 @@ terraform {
       version = "~> 3.0"
     }
   }
+  backend "azurerm" {
+    resource_group_name  = "amatix-rg"
+    storage_account_name = "amatixtfstate"
+    container_name       = "tfstate"
+    key                  = "helloworld.terraform.tfstate"
+  }
 }
 
 provider "azurerm" {
@@ -17,7 +23,7 @@ resource "azurerm_container_registry" "acr" {
   resource_group_name = var.resource_group_name
   location            = var.location
   sku                 = "Basic"
-  admin_enabled       = true
+  admin_enabled       = false
 }
 
 # Log Analytics (required by Container Apps)
@@ -44,15 +50,13 @@ resource "azurerm_container_app" "app" {
   container_app_environment_id = azurerm_container_app_environment.cae.id
   revision_mode                = "Single"
 
-  registry {
-    server               = azurerm_container_registry.acr.login_server
-    username             = azurerm_container_registry.acr.admin_username
-    password_secret_name = "acr-password"
+  identity {
+    type = "SystemAssigned"
   }
 
-  secret {
-    name  = "acr-password"
-    value = azurerm_container_registry.acr.admin_password
+  registry {
+    server   = azurerm_container_registry.acr.login_server
+    identity = "system"
   }
 
   template {
